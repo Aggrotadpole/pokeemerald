@@ -443,6 +443,7 @@ extern const u8 BattleScript_AffectionBasedEndurance[];
 extern const u8 BattleScript_SymbiosisActivates[];
 extern const u8 BattleScript_MultiHitPrintStrings[];
 extern const u8 BattleScript_BurnUpRemoveType[];
+extern const u8 BattleScript_BattlerInnateStatRaiseOnSwitchIn[];
 extern const u8 BattleScript_TargetAbilityStatRaiseRet[];
 extern const u8 BattleScript_DoubleShockRemoveType[];
 extern const u8 BattleScript_SeedSowerActivates[];

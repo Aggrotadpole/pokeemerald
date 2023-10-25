@@ -55,8 +55,13 @@
 
 #define WEATHER_HAS_EFFECT ((!IsAbilityOnField(ABILITY_CLOUD_NINE) && !IsAbilityOnField(ABILITY_AIR_LOCK)))
 
+#define BATTLER_NONE       0
+#define BATTLER_ABILITY    1
+#define BATTLER_INNATE     2
+
 #define IS_WHOLE_SIDE_ALIVE(battler)    ((IsBattlerAlive(battler) && IsBattlerAlive(BATTLE_PARTNER(battler))))
 #define IS_ALIVE_AND_PRESENT(battler)   (IsBattlerAlive(battler) && IsBattlerSpritePresent(battler))
+#define BATTLER_HAS_ABILITY(battlerId, ability) ((GetBattlerAbility(battlerId) == ability || BattlerHasInnate(battlerId, ability)))
 
 // for Natural Gift and Fling
 struct TypePower
@@ -222,6 +227,10 @@ void CopyMonAbilityAndTypesToBattleMon(u32 battler, struct Pokemon *mon);
 void RecalcBattlerStats(u32 battler, struct Pokemon *mon);
 bool32 IsAlly(u32 battlerAtk, u32 battlerDef);
 bool32 IsGen6ExpShareEnabled(void);
+
+bool32 DoesBattlerIgnoreAbilityorInnateChecks(u32 battler);
+s32 GetCurrentTerrain(void);
+u8 BattlerHasInnateOrAbility(u8 battler, u16 ability);
 
 // Ability checks
 bool32 IsRolePlayBannedAbilityAtk(u16 ability);

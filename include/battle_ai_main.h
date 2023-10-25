@@ -24,6 +24,10 @@ void BattleAI_SetupItems(void);
 void BattleAI_SetupFlags(void);
 void BattleAI_SetupAIData(u8 defaultScoreMoves, u32 battler);
 u32 BattleAI_ChooseMoveOrAction(void);
+
+bool8 BattlerHasInnate(u8 battlerId, u16 ability);
+bool8 GetBattlerInnateNum(u8 battlerId, u16 ability);
+
 void Ai_InitPartyStruct(void);
 void Ai_UpdateSwitchInData(u32 battler);
 void Ai_UpdateFaintData(u32 battler);

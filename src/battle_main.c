@@ -3386,7 +3386,7 @@ void FaintClearSetData(u32 battler)
 
                 // If the released mon can be confused, do so.
                 // Don't use CanBeConfused here, since it can cause issues in edge cases.
-                if (!(GetBattlerAbility(otherSkyDropper) == ABILITY_OWN_TEMPO
+                if (!((GetBattlerAbility(otherSkyDropper) == ABILITY_OWN_TEMPO || BattlerHasInnate(otherSkyDropper, ABILITY_OWN_TEMPO))
                     || gBattleMons[otherSkyDropper].status2 & STATUS2_CONFUSION
                     || IsBattlerTerrainAffected(otherSkyDropper, STATUS_FIELD_MISTY_TERRAIN)))
                 {
@@ -4003,7 +4003,7 @@ u8 IsRunningFromBattleImpossible(u32 battler)
     #endif
     if (gBattleTypeFlags & BATTLE_TYPE_LINK)
         return BATTLE_RUN_SUCCESS;
-    if (GetBattlerAbility(battler) == ABILITY_RUN_AWAY)
+    if (GetBattlerAbility(battler) == ABILITY_RUN_AWAY||BattlerHasInnate(battler, ABILITY_RUN_AWAY))
         return BATTLE_RUN_SUCCESS;
 
     if ((i = IsAbilityPreventingEscape(battler)))
@@ -4607,26 +4607,26 @@ u32 GetBattlerTotalSpeedStatArgs(u32 battler, u32 ability, u32 holdEffect)
     // weather abilities
     if (WEATHER_HAS_EFFECT)
     {
-        if (ability == ABILITY_SWIFT_SWIM       && holdEffect != HOLD_EFFECT_UTILITY_UMBRELLA && gBattleWeather & B_WEATHER_RAIN)
+        if ((ability == ABILITY_SWIFT_SWIM||BattlerHasInnate(battler, ABILITY_SWIFT_SWIM))       && holdEffect != HOLD_EFFECT_UTILITY_UMBRELLA && gBattleWeather & B_WEATHER_RAIN)
             speed *= 2;
-        else if (ability == ABILITY_CHLOROPHYLL && holdEffect != HOLD_EFFECT_UTILITY_UMBRELLA && gBattleWeather & B_WEATHER_SUN)
+        if ((ability == ABILITY_CHLOROPHYLL||BattlerHasInnate(battler, ABILITY_CHLOROPHYLL)) && holdEffect != HOLD_EFFECT_UTILITY_UMBRELLA && gBattleWeather & B_WEATHER_SUN)
             speed *= 2;
-        else if (ability == ABILITY_SAND_RUSH   && gBattleWeather & B_WEATHER_SANDSTORM)
+        if ((ability == ABILITY_SAND_RUSH||BattlerHasInnate(battler, ABILITY_SAND_RUSH))   && gBattleWeather & B_WEATHER_SANDSTORM)
             speed *= 2;
-        else if (ability == ABILITY_SLUSH_RUSH  && (gBattleWeather & (B_WEATHER_HAIL | B_WEATHER_SNOW)))
+        if ((ability == ABILITY_SLUSH_RUSH||BattlerHasInnate(battler, ABILITY_SAND_RUSH))  && (gBattleWeather & (B_WEATHER_HAIL | B_WEATHER_SNOW)))
             speed *= 2;
     }
 
     // other abilities
-    if (ability == ABILITY_QUICK_FEET && gBattleMons[battler].status1 & STATUS1_ANY)
+    if ((ability == ABILITY_QUICK_FEET||BattlerHasInnate(battler, ABILITY_QUICK_FEET)) && gBattleMons[battler].status1 & STATUS1_ANY)
         speed = (speed * 150) / 100;
-    else if (ability == ABILITY_SURGE_SURFER && gFieldStatuses & STATUS_FIELD_ELECTRIC_TERRAIN)
+    if ((ability == ABILITY_SURGE_SURFER||BattlerHasInnate(battler, ABILITY_SURGE_SURFER)) && gFieldStatuses & STATUS_FIELD_ELECTRIC_TERRAIN)
         speed *= 2;
-    else if (ability == ABILITY_SLOW_START && gDisableStructs[battler].slowStartTimer != 0)
+    if ((ability == ABILITY_SLOW_START||BattlerHasInnate(battler, ABILITY_SLOW_START)) && gDisableStructs[battler].slowStartTimer != 0)
         speed /= 2;
-    else if (ability == ABILITY_PROTOSYNTHESIS && gBattleWeather & B_WEATHER_SUN && highestStat == STAT_SPEED)
+    if ((ability == ABILITY_PROTOSYNTHESIS||BattlerHasInnate(battler, ABILITY_PROTOSYNTHESIS)) && gBattleWeather & B_WEATHER_SUN && highestStat == STAT_SPEED)
         speed = (speed * 150) / 100;
-    else if (ability == ABILITY_QUARK_DRIVE && gFieldStatuses & STATUS_FIELD_ELECTRIC_TERRAIN && highestStat == STAT_SPEED)
+    if ((ability == ABILITY_QUARK_DRIVE||BattlerHasInnate(battler, ABILITY_QUARK_DRIVE)) && gFieldStatuses & STATUS_FIELD_ELECTRIC_TERRAIN && highestStat == STAT_SPEED)
         speed = (speed * 150) / 100;
 
     // stat stages
@@ -4694,7 +4694,7 @@ s8 GetMovePriority(u32 battler, u16 move)
     u16 ability = GetBattlerAbility(battler);
 
     priority = gBattleMoves[move].priority;
-    if (ability == ABILITY_GALE_WINGS
+    if ((ability == ABILITY_GALE_WINGS||BattlerHasInnate(battler, ABILITY_GALE_WINGS))
     #if B_GALE_WINGS >= GEN_7
         && BATTLER_MAX_HP(battler)
     #endif
@@ -4702,16 +4702,16 @@ s8 GetMovePriority(u32 battler, u16 move)
     {
         priority++;
     }
-    else if (ability == ABILITY_PRANKSTER && IS_MOVE_STATUS(move))
+    if ((ability == ABILITY_PRANKSTER||BattlerHasInnate(battler, ABILITY_PRANKSTER)) && IS_MOVE_STATUS(move))
     {
         gProtectStructs[battler].pranksterElevated = 1;
         priority++;
     }
-    else if (gBattleMoves[move].effect == EFFECT_GRASSY_GLIDE && gFieldStatuses & STATUS_FIELD_GRASSY_TERRAIN && IsBattlerGrounded(battler))
+    if (gBattleMoves[move].effect == EFFECT_GRASSY_GLIDE && gFieldStatuses & STATUS_FIELD_GRASSY_TERRAIN && IsBattlerGrounded(battler))
     {
         priority++;
     }
-    else if (ability == ABILITY_TRIAGE)
+    if ((ability == ABILITY_TRIAGE||BattlerHasInnate(battler, ABILITY_TRIAGE)))
     {
         switch (gBattleMoves[move].effect)
         {
@@ -4747,7 +4747,7 @@ u32 GetWhichBattlerFasterArgs(u32 battler1, u32 battler2, bool32 ignoreChosenMov
 
     // Battler 1
     // Quick Draw
-    if (!ignoreChosenMoves && ability1 == ABILITY_QUICK_DRAW && !IS_MOVE_STATUS(gChosenMoveByBattler[battler1]) && RandomPercentage(RNG_QUICK_DRAW, 30))
+    if (!ignoreChosenMoves && (ability1 == ABILITY_QUICK_DRAW||BattlerHasInnate(battler1, ABILITY_QUICK_DRAW)) && !IS_MOVE_STATUS(gChosenMoveByBattler[battler1]) && RandomPercentage(RNG_QUICK_DRAW, 30))
         gProtectStructs[battler1].quickDraw = TRUE;
     // Quick Claw and Custap Berry
     if (!gProtectStructs[battler1].quickDraw
@@ -4757,7 +4757,7 @@ u32 GetWhichBattlerFasterArgs(u32 battler1, u32 battler2, bool32 ignoreChosenMov
 
     // Battler 2
     // Quick Draw
-    if (!ignoreChosenMoves && ability2 == ABILITY_QUICK_DRAW && !IS_MOVE_STATUS(gChosenMoveByBattler[battler2]) && RandomPercentage(RNG_QUICK_DRAW, 30))
+    if (!ignoreChosenMoves && (ability2 == ABILITY_QUICK_DRAW||BattlerHasInnate(battler2, ABILITY_QUICK_DRAW)) && !IS_MOVE_STATUS(gChosenMoveByBattler[battler2]) && RandomPercentage(RNG_QUICK_DRAW, 30))
         gProtectStructs[battler2].quickDraw = TRUE;
     // Quick Claw and Custap Berry
     if (!gProtectStructs[battler2].quickDraw
@@ -4783,13 +4783,13 @@ u32 GetWhichBattlerFasterArgs(u32 battler1, u32 battler2, bool32 ignoreChosenMov
             strikesFirst = 1;
         else if (holdEffectBattler2 == HOLD_EFFECT_LAGGING_TAIL && holdEffectBattler1 != HOLD_EFFECT_LAGGING_TAIL)
             strikesFirst = 0;
-        else if (ability1 == ABILITY_STALL && ability2 != ABILITY_STALL)
+        else if ((ability1 == ABILITY_STALL||BattlerHasInnate(battler1, ABILITY_STALL)) && (ability2 != ABILITY_STALL||BattlerHasInnate(battler2, ABILITY_STALL)))
             strikesFirst = 1;
-        else if (ability2 == ABILITY_STALL && ability1 != ABILITY_STALL)
+        else if ((ability2 == ABILITY_STALL||BattlerHasInnate(battler2, ABILITY_STALL)) && (ability1 != ABILITY_STALL||BattlerHasInnate(battler1, ABILITY_STALL)))
             strikesFirst = 0;
-        else if (ability1 == ABILITY_MYCELIUM_MIGHT && ability2 != ABILITY_MYCELIUM_MIGHT && IS_MOVE_STATUS(gCurrentMove))
+        else if ((ability1 == ABILITY_MYCELIUM_MIGHT||BattlerHasInnate(battler1, ABILITY_MYCELIUM_MIGHT)) && (ability2 != ABILITY_MYCELIUM_MIGHT||BattlerHasInnate(battler2, ABILITY_MYCELIUM_MIGHT)) && IS_MOVE_STATUS(gCurrentMove))
             strikesFirst = 1;
-        else if (ability2 == ABILITY_MYCELIUM_MIGHT && ability1 != ABILITY_MYCELIUM_MIGHT && IS_MOVE_STATUS(gCurrentMove))
+        else if ((ability2 == ABILITY_MYCELIUM_MIGHT||BattlerHasInnate(battler2, ABILITY_MYCELIUM_MIGHT)) && (ability1 != ABILITY_MYCELIUM_MIGHT||BattlerHasInnate(battler1, ABILITY_MYCELIUM_MIGHT)) && IS_MOVE_STATUS(gCurrentMove))
             strikesFirst = 0;
         else
         {
@@ -5676,38 +5676,38 @@ void SetTypeBeforeUsingMove(u32 move, u32 battlerAtk)
     {
         gBattleStruct->dynamicMoveType = TYPE_ELECTRIC | F_DYNAMIC_TYPE_2;
     }
-    else if (gBattleMoves[move].type == TYPE_NORMAL
+    if (gBattleMoves[move].type == TYPE_NORMAL
              && gBattleMoves[move].effect != EFFECT_HIDDEN_POWER
              && gBattleMoves[move].effect != EFFECT_WEATHER_BALL
              && gBattleMoves[move].effect != EFFECT_CHANGE_TYPE_ON_ITEM
              && gBattleMoves[move].effect != EFFECT_NATURAL_GIFT
-             && ((attackerAbility == ABILITY_PIXILATE && (ateType = TYPE_FAIRY))
-                 || (attackerAbility == ABILITY_REFRIGERATE && (ateType = TYPE_ICE))
-                 || (attackerAbility == ABILITY_AERILATE && (ateType = TYPE_FLYING))
-                 || ((attackerAbility == ABILITY_GALVANIZE) && (ateType = TYPE_ELECTRIC))
+             && (((attackerAbility == ABILITY_PIXILATE||BattlerHasInnate(battlerAtk, ABILITY_PIXILATE)) && (ateType = TYPE_FAIRY))
+                 || ((attackerAbility == ABILITY_REFRIGERATE||BattlerHasInnate(battlerAtk, ABILITY_REFRIGERATE)) && (ateType = TYPE_ICE))
+                 || ((attackerAbility == ABILITY_AERILATE||BattlerHasInnate(battlerAtk, ABILITY_AERILATE)) && (ateType = TYPE_FLYING))
+                 || (((attackerAbility == ABILITY_GALVANIZE||BattlerHasInnate(battlerAtk, ABILITY_GALVANIZE))) && (ateType = TYPE_ELECTRIC))
                 )
              )
     {
         gBattleStruct->dynamicMoveType = ateType | F_DYNAMIC_TYPE_2;
         gBattleStruct->ateBoost[battlerAtk] = 1;
     }
-    else if (gBattleMoves[move].type != TYPE_NORMAL
+    if (gBattleMoves[move].type != TYPE_NORMAL
              && gBattleMoves[move].effect != EFFECT_HIDDEN_POWER
              && gBattleMoves[move].effect != EFFECT_WEATHER_BALL
-             && attackerAbility == ABILITY_NORMALIZE)
+             && (attackerAbility == ABILITY_NORMALIZE||BattlerHasInnate(battlerAtk, ABILITY_NORMALIZE)))
     {
         gBattleStruct->dynamicMoveType = TYPE_NORMAL | F_DYNAMIC_TYPE_2;
         gBattleStruct->ateBoost[battlerAtk] = 1;
     }
-    else if (gBattleMoves[move].soundMove && attackerAbility == ABILITY_LIQUID_VOICE)
+    if (gBattleMoves[move].soundMove && (attackerAbility == ABILITY_LIQUID_VOICE||BattlerHasInnate(battlerAtk, ABILITY_LIQUID_VOICE)))
     {
         gBattleStruct->dynamicMoveType = TYPE_WATER | F_DYNAMIC_TYPE_2;
     }
-    else if (gStatuses4[battlerAtk] & STATUS4_PLASMA_FISTS && moveType == TYPE_NORMAL)
+    if (gStatuses4[battlerAtk] & STATUS4_PLASMA_FISTS && moveType == TYPE_NORMAL)
     {
         gBattleStruct->dynamicMoveType = TYPE_ELECTRIC | F_DYNAMIC_TYPE_2;
     }
-    else if (move == MOVE_AURA_WHEEL && gBattleMons[battlerAtk].species == SPECIES_MORPEKO_HANGRY)
+    if (move == MOVE_AURA_WHEEL && gBattleMons[battlerAtk].species == SPECIES_MORPEKO_HANGRY)
     {
         gBattleStruct->dynamicMoveType = TYPE_DARK | F_DYNAMIC_TYPE_2;
     }

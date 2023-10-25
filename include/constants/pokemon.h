@@ -315,6 +315,12 @@
 #define NUM_NORMAL_ABILITY_SLOTS 2
 #define NUM_HIDDEN_ABILITY_SLOTS 1
 
+#define NUM_INNATE_PER_SPECIES 3
+
+#define INNATE_1_LEVEL 1
+#define INNATE_2_LEVEL 17 // eg. 17
+#define INNATE_3_LEVEL 24 // eg 24
+
 // Species Flags
 #define SPECIES_FLAG_LEGENDARY          (1 << 0)
 #define SPECIES_FLAG_MYTHICAL           (1 << 1)

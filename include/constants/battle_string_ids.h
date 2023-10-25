@@ -671,7 +671,9 @@
 #define STRINGID_TARGETISBEINGSALTCURED               669
 #define STRINGID_TARGETISHURTBYSALTCURE               670
 
-#define BATTLESTRINGS_COUNT                           671
+#define STRINGID_BATTLERINNATERAISEDSTAT              671
+
+#define BATTLESTRINGS_COUNT                           672
 
 // This is the string id that gBattleStringsTable starts with.
 // String ids before this (e.g. STRINGID_INTROMSG) are not in the table,

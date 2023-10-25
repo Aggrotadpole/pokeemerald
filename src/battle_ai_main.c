@@ -5393,3 +5393,17 @@ static s32 AI_FirstBattle(u32 battlerAtk, u32 battlerDef, u32 move, s32 score)
 
     return score;
 }
+
+bool8 BattlerHasInnate(u8 battlerId, u16 ability){
+    if(GetBattlerSide(battlerId) == B_SIDE_PLAYER)
+        return SpeciesHasInnate(gBattleMons[battlerId].species, ability, gBattleMons[battlerId].level, gBattleMons[battlerId].personality, FALSE, FALSE);
+    else
+        return SpeciesHasInnate(gBattleMons[battlerId].species, ability, gBattleMons[battlerId].level, gBattleMons[battlerId].personality, TRUE, TRUE);
+}
+
+bool8 GetBattlerInnateNum(u8 battlerId, u16 ability){
+    if(GetBattlerSide(battlerId) == B_SIDE_PLAYER)
+        return GetSpeciesInnateNum(gBattleMons[battlerId].species, ability, gBattleMons[battlerId].level, gBattleMons[battlerId].personality, FALSE);
+    else
+        return GetSpeciesInnateNum(gBattleMons[battlerId].species, ability, gBattleMons[battlerId].level, gBattleMons[battlerId].personality, TRUE);
+}

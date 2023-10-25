@@ -17,6 +17,7 @@
 #include "constants/field_poison.h"
 #include "constants/form_change_types.h"
 #include "constants/party_menu.h"
+#include "constants/abilities.h"
 
 static bool32 IsMonValidSpecies(struct Pokemon *pokemon)
 {
@@ -127,9 +128,10 @@ s32 DoPoisonFieldEffect(void)
     struct Pokemon *pokemon = gPlayerParty;
     u32 numPoisoned = 0;
     u32 numFainted = 0;
-
+    u16 ability;
     for (i = 0; i < PARTY_SIZE; i++)
     {
+    /*
         if (GetMonData(pokemon, MON_DATA_SANITY_HAS_SPECIES) && GetAilmentFromStatus(GetMonData(pokemon, MON_DATA_STATUS)) == AILMENT_PSN)
         {
             // Apply poison damage
@@ -145,6 +147,27 @@ s32 DoPoisonFieldEffect(void)
                 numFainted++;
         #endif
 
+            SetMonData(pokemon, MON_DATA_HP, &hp);
+            numPoisoned++;
+        }
+        pokemon++;
+    */
+        ability = GetMonAbility(&gPlayerParty[i]);
+        if (GetMonData(pokemon, MON_DATA_SANITY_HAS_SPECIES)
+            && GetAilmentFromStatus(GetMonData(pokemon, MON_DATA_STATUS)) == AILMENT_PSN
+            && ability != ABILITY_POISON_HEAL
+            && !MonHasInnate(pokemon, ABILITY_POISON_HEAL)
+            && ability != ABILITY_TOXIC_BOOST
+            && !MonHasInnate(pokemon, ABILITY_TOXIC_BOOST)
+            && ability != ABILITY_MAGIC_GUARD
+            && !MonHasInnate(pokemon, ABILITY_MAGIC_GUARD)
+            && OW_POISON_DAMAGE)
+        {
+            hp = GetMonData(pokemon, MON_DATA_HP);
+            if (hp == 1 || --hp == 1)
+            {
+                numFainted++;
+            }
             SetMonData(pokemon, MON_DATA_HP, &hp);
             numPoisoned++;
         }

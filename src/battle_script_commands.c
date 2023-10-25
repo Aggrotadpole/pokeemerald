@@ -1637,11 +1637,11 @@ u32 GetTotalAccuracy(u32 battlerAtk, u32 battlerDef, u32 move, u32 atkAbility, u
     gPotentialItemEffectBattler = battlerDef;
     accStage = gBattleMons[battlerAtk].statStages[STAT_ACC];
     evasionStage = gBattleMons[battlerDef].statStages[STAT_EVASION];
-    if (atkAbility == ABILITY_UNAWARE || atkAbility == ABILITY_KEEN_EYE)
+    if (BATTLER_HAS_ABILITY(battlerAtk,ABILITY_UNAWARE) || BATTLER_HAS_ABILITY(battlerAtk,ABILITY_KEEN_EYE))
         evasionStage = DEFAULT_STAT_STAGE;
     if (gBattleMoves[move].ignoresTargetDefenseEvasionStages)
         evasionStage = DEFAULT_STAT_STAGE;
-    if (defAbility == ABILITY_UNAWARE)
+    if (BATTLER_HAS_ABILITY(battlerDef,ABILITY_UNAWARE))
         accStage = DEFAULT_STAT_STAGE;
 
     if (gBattleMons[battlerDef].status2 & STATUS2_FORESIGHT || gStatuses3[battlerDef] & STATUS3_MIRACLE_EYED)
@@ -1660,12 +1660,12 @@ u32 GetTotalAccuracy(u32 battlerAtk, u32 battlerDef, u32 move, u32 atkAbility, u
       && (gBattleMoves[move].effect == EFFECT_THUNDER || gBattleMoves[move].effect == EFFECT_HURRICANE))
         moveAcc = 50;
     // Check Wonder Skin.
-    if (defAbility == ABILITY_WONDER_SKIN && IS_MOVE_STATUS(move) && moveAcc > 50)
+    if (BATTLER_HAS_ABILITY(battlerDef,ABILITY_WONDER_SKIN) && IS_MOVE_STATUS(move) && moveAcc > 50)
         moveAcc = 50;
 
     calc = gAccuracyStageRatios[buff].dividend * moveAcc;
     calc /= gAccuracyStageRatios[buff].divisor;
-
+/*
     // Attacker's ability
     switch (atkAbility)
     {
@@ -1706,6 +1706,35 @@ u32 GetTotalAccuracy(u32 battlerAtk, u32 battlerDef, u32 move, u32 atkAbility, u
             calc = (calc * 110) / 100; // 1.1 ally's victory star boost
         break;
     }
+*/
+
+    if (atkAbility == ABILITY_COMPOUND_EYES || BattlerHasInnate(battlerAtk, ABILITY_COMPOUND_EYES))
+        calc = (calc * 130) / 100; // 1.3 compound eyes boost
+
+    if (BATTLER_HAS_ABILITY(battlerAtk, ABILITY_VICTORY_STAR))
+        calc = (calc * 110) / 100; // 1.1 victory star boost
+
+    if (BATTLER_HAS_ABILITY(BATTLE_PARTNER(battlerAtk), ABILITY_VICTORY_STAR) && IsBattlerAlive(BATTLE_PARTNER(battlerAtk)))
+        calc = (calc * 110) / 100; // 1.1 ally's victory star boost
+
+    if (BATTLER_HAS_ABILITY(battlerAtk, ABILITY_ILLUMINATE))
+        calc = (calc * 120) / 100; // 1.2 illuminate boost
+
+    if (BATTLER_HAS_ABILITY(battlerAtk, ABILITY_KEEN_EYE))
+        calc = (calc * 120) / 100; // 1.2 keen eye boost
+
+    if (BATTLER_HAS_ABILITY(battlerDef, ABILITY_SAND_VEIL) && WEATHER_HAS_EFFECT && gBattleWeather & B_WEATHER_SANDSTORM)
+        calc = (calc * 80) / 100; // 1.2 sand veil loss
+
+    if (BATTLER_HAS_ABILITY(battlerDef, ABILITY_SNOW_CLOAK) && WEATHER_HAS_EFFECT && gBattleWeather & B_WEATHER_HAIL)
+        calc = (calc * 80) / 100; // 1.2 snow cloak loss
+
+    if (BATTLER_HAS_ABILITY(battlerDef, ABILITY_TANGLED_FEET) && gBattleMons[battlerDef].status2 & STATUS2_CONFUSION)
+        calc = (calc * 50) / 100; // 1.5 tangled feet loss
+
+    if (BATTLER_HAS_ABILITY(battlerAtk, ABILITY_HUSTLE))
+        calc = (calc * 90) / 100; // 1.1 hustle loss
+
 
     // Attacker's hold effect
     switch (atkHoldEffect)
@@ -1745,6 +1774,76 @@ u32 GetTotalAccuracy(u32 battlerAtk, u32 battlerDef, u32 move, u32 atkAbility, u
     if (GetBattlerFriendshipScore(battlerDef) >= FRIENDSHIP_150_TO_199 && (Random() % 100) <= 20)
         calc = (calc * 90) / 100;
 #endif
+
+/*
+    //Hypnotist + Hypnosis - Ability and Innate
+    if(move == MOVE_HYPNOSIS && BATTLER_HAS_ABILITY(battlerAtk, ABILITY_HYPNOTIST))
+        moveAcc = moveAcc * 1.5;
+
+    if(move == MOVE_HYPNOSIS && BATTLER_HAS_ABILITY(battlerAtk, ABILITY_LUNAR_ECLIPSE))
+        moveAcc = moveAcc * 1.5;
+
+    if(BATTLER_HAS_ABILITY(battlerAtk, ABILITY_RADIANCE))
+        moveAcc = moveAcc * 1.2;
+
+    //Inner Focus + Focus Blast - Ability and Innate
+    if(move == MOVE_FOCUS_BLAST && BATTLER_HAS_ABILITY(battlerAtk, ABILITY_INNER_FOCUS))
+        moveAcc = 90;
+*/
+    // Bad Luck Ability lowers accuracy by 5%
+/*
+    if(BATTLER_HAS_ABILITY(battlerDef, ABILITY_BAD_LUCK) || (BATTLER_HAS_ABILITY(BATTLE_PARTNER(battlerDef), ABILITY_BAD_LUCK) && IsBattlerAlive(BATTLE_PARTNER(battlerDef))))
+        moveAcc = (moveAcc * 95) / 100;
+
+    // Check Thunder and Hurricane on sunny weather.
+    if (WEATHER_HAS_EFFECT && gBattleWeather & B_WEATHER_SUN
+        && (gBattleMoves[move].effect == EFFECT_THUNDER || gBattleMoves[move].effect == EFFECT_HURRICANE))
+        moveAcc = 50;
+*/
+
+/*
+    if (BATTLER_HAS_ABILITY(battlerAtk, ABILITY_SIGHTING_SYSTEM))
+        moveAcc = 100;
+
+    if (BATTLER_HAS_ABILITY(battlerAtk, ABILITY_ROUNDHOUSE) && gBattleMoves[move].flags & FLAG_STRIKER_BOOST)
+        moveAcc = 100;
+
+    if (BATTLER_HAS_ABILITY(battlerAtk, ABILITY_IRON_BARRAGE))
+        moveAcc = 100;
+
+    if (BATTLER_HAS_ABILITY(battlerAtk, ABILITY_ARTILLERY) && (gBattleMoves[move].flags & FLAG_MEGA_LAUNCHER_BOOST))
+        moveAcc = 100;
+
+    if (BATTLER_HAS_ABILITY(battlerAtk, ABILITY_SWEEPING_EDGE) && (gBattleMoves[move].flags & FLAG_KEEN_EDGE_BOOST))
+        moveAcc = 100;
+
+    if (BATTLER_HAS_ABILITY(battlerAtk, ABILITY_DEADEYE))
+        moveAcc = 100;
+
+    //Angel's Wrath
+    if(BATTLER_HAS_ABILITY(battlerAtk, ABILITY_ANGELS_WRATH)){
+        switch(move){
+            case MOVE_TACKLE:
+            case MOVE_POISON_STING:
+            case MOVE_ELECTROWEB:
+                moveAcc = 100;
+            break;
+        }
+    }
+*/
+    calc = gAccuracyStageRatios[buff].dividend * moveAcc;
+    calc /= gAccuracyStageRatios[buff].divisor;
+
+
+    if (defHoldEffect == HOLD_EFFECT_EVASION_UP)
+        calc = (calc * (100 - defParam)) / 100;
+
+    if (atkHoldEffect == HOLD_EFFECT_WIDE_LENS)
+        calc = (calc * (100 + atkParam)) / 100;
+    else if (atkHoldEffect == HOLD_EFFECT_ZOOM_LENS && GetBattlerTurnOrderNum(battlerAtk) > GetBattlerTurnOrderNum(battlerDef));
+        calc = (calc * (100 + atkParam)) / 100;
+
+    return calc;
 
     return calc;
 }

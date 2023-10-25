@@ -175,6 +175,7 @@ struct SpecialStatus
     u8 sturdied:1;
     u8 stormDrainRedirected:1;
     u8 switchInAbilityDone:1;
+    bool8 switchInInnateDone[NUM_INNATE_PER_SPECIES];
     u8 switchInItemDone:1;
     u8 instructedChosenTarget:3;
     u8 berryReduced:1;
@@ -665,6 +666,7 @@ struct BattleStruct
     u8 switchInAbilityPostponed:4; // To not activate against an empty field, each bit for battler
     u8 ballSpriteIds[2];    // item gfx, window gfx
     u8 appearedInBattle; // Bitfield to track which Pokemon appeared in battle. Used for Burmy's form change
+    bool8 singleuseability[PARTY_SIZE][NUM_INNATE_PER_SPECIES + 1][2]; // For the sake of Instruct
     u8 skyDropTargets[MAX_BATTLERS_COUNT]; // For Sky Drop, to account for if multiple Pokemon use Sky Drop in a double battle.
     // When using a move which hits multiple opponents which is then bounced by a target, we need to make sure, the move hits both opponents, the one with bounce, and the one without.
     u8 attackerBeforeBounce:2;

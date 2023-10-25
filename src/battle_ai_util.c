@@ -701,7 +701,7 @@ bool32 IsTruantMonVulnerable(u32 battlerAI, u32 opposingBattler)
 // move checks
 bool32 IsAffectedByPowder(u32 battler, u32 ability, u32 holdEffect)
 {
-    if (ability == ABILITY_OVERCOAT
+    if (ability == ABILITY_OVERCOAT || BattlerHasInnate(battler, ABILITY_OVERCOAT)
     #if B_POWDER_GRASS >= GEN_6
         || IS_BATTLER_OF_TYPE(battler, TYPE_GRASS)
     #endif
@@ -1308,14 +1308,16 @@ bool32 AI_IsBattlerGrounded(u32 battlerId)
         return FALSE;
     else if (IS_BATTLER_OF_TYPE(battlerId, TYPE_FLYING))
         return FALSE;
+    else if (BattlerHasInnate(battlerId, ABILITY_LEVITATE) && !DoesBattlerIgnoreAbilityorInnateChecks(gBattlerAttacker))
+        return FALSE;
     else
         return TRUE;
 }
 
-bool32 DoesBattlerIgnoreAbilityChecks(u32 atkAbility, u32 move)
+bool32 DoesBattlerIgnoreAbilityChecks(u32 battlerAtk, u32 move)
 {
     u32 i;
-
+    u32 atkAbility = AI_GetAbility(battlerAtk);
     if (AI_THINKING_STRUCT->aiFlags & AI_FLAG_NEGATE_UNAWARE)
         return FALSE;   // AI handicap flag: doesn't understand ability suppression concept
 
@@ -1328,6 +1330,11 @@ bool32 DoesBattlerIgnoreAbilityChecks(u32 atkAbility, u32 move)
     if (atkAbility == ABILITY_MOLD_BREAKER
       || atkAbility == ABILITY_TERAVOLT
       || atkAbility == ABILITY_TURBOBLAZE)
+        return TRUE;
+
+    if(BattlerHasInnate(battlerAtk, ABILITY_MOLD_BREAKER) ||
+       BattlerHasInnate(battlerAtk, ABILITY_TERAVOLT) ||
+       BattlerHasInnate(battlerAtk, ABILITY_TURBOBLAZE))
         return TRUE;
 
     return FALSE;
@@ -1461,6 +1468,7 @@ bool32 IsMoveRedirectionPrevented(u32 move, u32 atkAbility)
 
 u32 AI_GetMoveAccuracy(u32 battlerAtk, u32 battlerDef, u32 move)
 {
+
     return GetTotalAccuracy(battlerAtk, battlerDef, move, AI_DATA->abilities[battlerAtk], AI_DATA->abilities[battlerDef],
                             AI_DATA->holdEffects[battlerAtk], AI_DATA->holdEffects[battlerDef]);
 }
@@ -1481,6 +1489,58 @@ bool32 IsSemiInvulnerable(u32 battlerDef, u32 move)
 
 bool32 IsMoveEncouragedToHit(u32 battlerAtk, u32 battlerDef, u32 move)
 {
+    // No Guard and Toxic can hit semi-invulnerable mons
+    if (AI_GetAbility(battlerDef) == ABILITY_NO_GUARD || AI_GetAbility(battlerAtk) == ABILITY_NO_GUARD ||
+        BattlerHasInnate(battlerDef, ABILITY_NO_GUARD) || BattlerHasInnate(battlerAtk, ABILITY_NO_GUARD))
+        return TRUE;
+/*
+    if ((BattlerHasInnate(battlerAtk, ABILITY_DEADEYE) || AI_GetAbility(battlerAtk) == ABILITY_DEADEYE))
+        return TRUE;
+
+    if ((BattlerHasInnate(battlerAtk, ABILITY_GIFTED_MIND) || AI_GetAbility(battlerAtk) == ABILITY_GIFTED_MIND) && IS_MOVE_STATUS(move))
+        return TRUE;
+*/
+    if (B_TOXIC_NEVER_MISS >= GEN_6 && gBattleMoves[move].effect == EFFECT_TOXIC && IS_BATTLER_OF_TYPE(battlerAtk, TYPE_POISON))
+        return TRUE;
+
+    if (IsSemiInvulnerable(battlerDef, move))
+        return FALSE;
+/*
+    if ((BattlerHasInnate(battlerAtk, ABILITY_ARTILLERY) || AI_GetAbility(battlerAtk) == ABILITY_ARTILLERY) && gBattleMoves[move].flags & FLAG_MEGA_LAUNCHER_BOOST)
+        return TRUE;
+
+    if ((BattlerHasInnate(battlerAtk, ABILITY_SWEEPING_EDGE) || AI_GetAbility(battlerAtk) == ABILITY_SWEEPING_EDGE) && gBattleMoves[move].flags & FLAG_KEEN_EDGE_BOOST)
+        return TRUE;
+
+    if((BattlerHasInnate(battlerAtk, ABILITY_SIGHTING_SYSTEM) || AI_GetAbility(battlerAtk) == ABILITY_SIGHTING_SYSTEM))
+        return TRUE;
+
+    if((BattlerHasInnate(battlerAtk, ABILITY_IRON_BARRAGE) || AI_GetAbility(battlerAtk) == ABILITY_IRON_BARRAGE))
+        return TRUE;
+*/
+    //TODO - anticipate protect move?
+
+    // always hits
+    if (gStatuses3[battlerDef] & STATUS3_ALWAYS_HITS || gDisableStructs[battlerDef].battlerWithSureHit == battlerAtk)
+        return TRUE;
+
+    // discouraged from hitting
+    if (AI_GetWeather(AI_DATA) && (gBattleWeather & B_WEATHER_SUN)
+      && (gBattleMoves[move].effect == EFFECT_THUNDER || gBattleMoves[move].effect == EFFECT_HURRICANE))
+        return FALSE;
+
+    // increased accuracy but don't always hit
+    if ((AI_GetWeather(AI_DATA) &&
+            (((gBattleWeather & B_WEATHER_RAIN) && (gBattleMoves[move].effect == EFFECT_THUNDER || gBattleMoves[move].effect == EFFECT_HURRICANE))
+         || (((gBattleWeather & B_WEATHER_HAIL) && move == MOVE_BLIZZARD))))
+     || (gBattleMoves[move].effect == EFFECT_VITAL_THROW)
+     || (gBattleMoves[move].accuracy == 0))
+    {
+        return TRUE;
+    }
+
+    return FALSE;
+/*
     u32 weather;
     if (IsSemiInvulnerable(battlerDef, move))
         return FALSE;
@@ -1518,6 +1578,7 @@ bool32 IsMoveEncouragedToHit(u32 battlerAtk, u32 battlerDef, u32 move)
     }
 
     return FALSE;
+*/
 }
 
 bool32 ShouldTryOHKO(u32 battlerAtk, u32 battlerDef, u32 atkAbility, u32 defAbility, u32 move)
@@ -1531,7 +1592,7 @@ bool32 ShouldTryOHKO(u32 battlerAtk, u32 battlerDef, u32 atkAbility, u32 defAbil
     else if (holdEffect == HOLD_EFFECT_FOCUS_SASH && AtMaxHp(battlerDef))
         return FALSE;
 
-    if (!DoesBattlerIgnoreAbilityChecks(atkAbility, move) && defAbility == ABILITY_STURDY)
+    if (!DoesBattlerIgnoreAbilityChecks(battlerAtk, move) && defAbility == ABILITY_STURDY)
         return FALSE;
 
     if ((((gStatuses3[battlerDef] & STATUS3_ALWAYS_HITS)
@@ -1561,16 +1622,21 @@ bool32 ShouldSetSandstorm(u32 battler, u32 ability, u32 holdEffect)
         return FALSE;
 
     if (ability == ABILITY_SAND_VEIL
-      || ability == ABILITY_SAND_RUSH
-      || ability == ABILITY_SAND_FORCE
-      || ability == ABILITY_OVERCOAT
-      || ability == ABILITY_MAGIC_GUARD
-      || holdEffect == HOLD_EFFECT_SAFETY_GOGGLES
-      || IS_BATTLER_OF_TYPE(battler, TYPE_ROCK)
-      || IS_BATTLER_OF_TYPE(battler, TYPE_STEEL)
-      || IS_BATTLER_OF_TYPE(battler, TYPE_GROUND)
-      || HasMoveEffect(battler, EFFECT_SHORE_UP)
-      || HasMoveEffect(battler, EFFECT_WEATHER_BALL))
+        || BattlerHasInnate(battler, ABILITY_SAND_VEIL)
+        || ability == ABILITY_SAND_RUSH
+        || BattlerHasInnate(battler, ABILITY_SAND_RUSH)
+        || ability == ABILITY_SAND_FORCE
+        || BattlerHasInnate(battler, ABILITY_SAND_FORCE)
+        || ability == ABILITY_OVERCOAT
+        || BattlerHasInnate(battler, ABILITY_OVERCOAT)
+        || ability == ABILITY_MAGIC_GUARD
+        || BattlerHasInnate(battler, ABILITY_MAGIC_GUARD)
+        || holdEffect == HOLD_EFFECT_SAFETY_GOGGLES
+        || IS_BATTLER_OF_TYPE(battler, TYPE_ROCK)
+        || IS_BATTLER_OF_TYPE(battler, TYPE_STEEL)
+        || IS_BATTLER_OF_TYPE(battler, TYPE_GROUND)
+        || HasMoveEffect(battler, EFFECT_SHORE_UP)
+        || HasMoveEffect(battler, EFFECT_WEATHER_BALL))
     {
         return TRUE;
     }
@@ -1584,16 +1650,22 @@ bool32 ShouldSetHail(u32 battler, u32 ability, u32 holdEffect)
         return FALSE;
 
     if (ability == ABILITY_SNOW_CLOAK
-      || ability == ABILITY_ICE_BODY
-      || ability == ABILITY_FORECAST
-      || ability == ABILITY_SLUSH_RUSH
-      || ability == ABILITY_MAGIC_GUARD
-      || ability == ABILITY_OVERCOAT
-      || holdEffect == HOLD_EFFECT_SAFETY_GOGGLES
-      || IS_BATTLER_OF_TYPE(battler, TYPE_ICE)
-      || HasMove(battler, MOVE_BLIZZARD)
-      || HasMoveEffect(battler, EFFECT_AURORA_VEIL)
-      || HasMoveEffect(battler, EFFECT_WEATHER_BALL))
+        || BattlerHasInnate(battler, ABILITY_SNOW_CLOAK)
+        || ability == ABILITY_ICE_BODY
+        || BattlerHasInnate(battler, ABILITY_ICE_BODY)
+        || ability == ABILITY_FORECAST
+        || BattlerHasInnate(battler, ABILITY_FORECAST)
+        || ability == ABILITY_SLUSH_RUSH
+        || BattlerHasInnate(battler, ABILITY_SLUSH_RUSH)
+        || ability == ABILITY_MAGIC_GUARD
+        || BattlerHasInnate(battler, ABILITY_MAGIC_GUARD)
+        || ability == ABILITY_OVERCOAT
+        || BattlerHasInnate(battler, ABILITY_OVERCOAT)
+        || holdEffect == HOLD_EFFECT_SAFETY_GOGGLES
+        || IS_BATTLER_OF_TYPE(battler, TYPE_ICE)
+        || HasMove(battler, MOVE_BLIZZARD)
+        || HasMoveEffect(battler, EFFECT_AURORA_VEIL)
+        || HasMoveEffect(battler, EFFECT_WEATHER_BALL))
     {
         return TRUE;
     }
@@ -1608,10 +1680,15 @@ bool32 ShouldSetRain(u32 battlerAtk, u32 atkAbility, u32 holdEffect)
 
     if (holdEffect != HOLD_EFFECT_UTILITY_UMBRELLA
      && (atkAbility == ABILITY_SWIFT_SWIM
+      || BattlerHasInnate(battlerAtk, ABILITY_SWIFT_SWIM)
       || atkAbility == ABILITY_FORECAST
+      || BattlerHasInnate(battlerAtk, ABILITY_FORECAST)
       || atkAbility == ABILITY_HYDRATION
+      || BattlerHasInnate(battlerAtk, ABILITY_HYDRATION)
       || atkAbility == ABILITY_RAIN_DISH
+      || BattlerHasInnate(battlerAtk, ABILITY_RAIN_DISH)
       || atkAbility == ABILITY_DRY_SKIN
+      || BattlerHasInnate(battlerAtk, ABILITY_DRY_SKIN)
       || HasMoveEffect(battlerAtk, EFFECT_THUNDER)
       || HasMoveEffect(battlerAtk, EFFECT_HURRICANE)
       || HasMoveEffect(battlerAtk, EFFECT_WEATHER_BALL)
@@ -1630,11 +1707,17 @@ bool32 ShouldSetSun(u32 battlerAtk, u32 atkAbility, u32 holdEffect)
 
     if (holdEffect != HOLD_EFFECT_UTILITY_UMBRELLA
      && (atkAbility == ABILITY_CHLOROPHYLL
+      || BattlerHasInnate(battlerAtk, ABILITY_CHLOROPHYLL)
       || atkAbility == ABILITY_FLOWER_GIFT
+      || BattlerHasInnate(battlerAtk, ABILITY_FLOWER_GIFT)
       || atkAbility == ABILITY_FORECAST
+      || BattlerHasInnate(battlerAtk, ABILITY_FORECAST)
       || atkAbility == ABILITY_LEAF_GUARD
+      || BattlerHasInnate(battlerAtk, ABILITY_LEAF_GUARD)
       || atkAbility == ABILITY_SOLAR_POWER
+      || BattlerHasInnate(battlerAtk, ABILITY_SOLAR_POWER)
       || atkAbility == ABILITY_HARVEST
+      || BattlerHasInnate(battlerAtk, ABILITY_HARVEST)
       || HasMoveEffect(battlerAtk, EFFECT_SOLAR_BEAM)
       || HasMoveEffect(battlerAtk, EFFECT_MORNING_SUN)
       || HasMoveEffect(battlerAtk, EFFECT_SYNTHESIS)
@@ -3831,4 +3914,10 @@ bool32 ShouldUseZMove(u32 battlerAtk, u32 battlerDef, u32 chosenMove)
 bool32 AI_IsBattlerAsleepOrComatose(u32 battlerId)
 {
     return (gBattleMons[battlerId].status1 & STATUS1_SLEEP) || AI_DATA->abilities[battlerId] == ABILITY_COMATOSE;
+}
+
+bool32 DoesBattlerIgnoreAbilityorInnateChecks(u32 battlerAtk)
+{
+    bool32 result = TRUE;
+    return result && DoesBattlerIgnoreAbilityChecks(battlerAtk,MOVE_UNAVAILABLE);
 }
