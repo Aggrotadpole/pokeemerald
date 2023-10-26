@@ -3722,6 +3722,10 @@ static void DoBattleIntro(void)
             }
 
             gBattleStruct->switchInAbilitiesCounter = 0;
+            for(i = 0;i < MAX_BATTLERS_COUNT+1;i++){
+                gBattleStruct->switchInInnatesCounter[i] = 0;
+            }
+            gBattleStruct->innateCheckMode = FALSE;
             gBattleStruct->switchInItemsCounter = 0;
             gBattleStruct->overworldWeatherDone = FALSE;
             SetAiLogicDataForTurn(AI_DATA); // get assumed abilities, hold effects, etc of all battlers
@@ -3735,7 +3739,10 @@ static void DoBattleIntro(void)
 static void TryDoEventsBeforeFirstTurn(void)
 {
     s32 i, j;
-
+    bool32 abilityused = TRUE;
+    u32 innatesused = 0;
+    u32 innateSlot = 0;
+    u32 innate = 0;
     if (gBattleControllerExecFlags)
         return;
 
@@ -3784,6 +3791,7 @@ static void TryDoEventsBeforeFirstTurn(void)
         return;
     }
 
+
     if (!gBattleStruct->terrainDone && AbilityBattleEffects(ABILITYEFFECT_SWITCH_IN_TERRAIN, 0, 0, ABILITYEFFECT_SWITCH_IN_TERRAIN, 0) != 0)
     {
         gBattleStruct->terrainDone = TRUE;
@@ -3813,8 +3821,29 @@ static void TryDoEventsBeforeFirstTurn(void)
 
         if (TryPrimalReversion(gBattlerAttacker))
             return;
-        if (AbilityBattleEffects(ABILITYEFFECT_ON_SWITCHIN, gBattlerAttacker, 0, 0, 0) != 0)
-            return;
+        if (!abilityused && AbilityBattleEffects(ABILITYEFFECT_ON_SWITCHIN, gBattlerAttacker, 0, 0, 0) != 0)
+            return;//abilityused = TRUE;
+        //for(i = 0; i < NUM_INNATE_PER_SPECIES;i++)
+            //if (AbilityBattleEffects(ABILITYEFFECT_ON_SWITCHIN, gBattlerAttacker, 0, gSpeciesInfo[gBattleMons[gBattlerAttacker].species].innates[i], 0) != 0)
+                //innatesused++;
+
+    }
+    /*
+    like it doesnt count to the next mon until it runs through every innate slot or it shouldnt at least
+    */
+    //the one below is innates
+    while (gBattleStruct->switchInInnatesCounter[0] < gBattlersCount){
+        innateSlot = gBattleStruct->switchInInnatesCounter[gBattleStruct->switchInInnatesCounter[0]+1];
+        while (gBattleStruct->switchInInnatesCounter[gBattleStruct->switchInInnatesCounter[0]+1]<NUM_INNATE_PER_SPECIES){
+            gBattleStruct->switchInInnatesCounter[gBattleStruct->switchInInnatesCounter[0]+1]++;
+            gBattlerAttacker = gBattlerByTurnOrder[gBattleStruct->switchInInnatesCounter[0]];
+            innate = gSpeciesInfo[gBattleMons[gBattlerAttacker].species].innates[innateSlot];
+            gBattleStruct->innateCheckMode = TRUE;
+            if (AbilityBattleEffects(ABILITYEFFECT_ON_SWITCHIN, gBattlerAttacker, 0, innate, 0) != 0){
+                return;
+            }
+        }
+        if(gBattleStruct->switchInInnatesCounter[gBattleStruct->switchInInnatesCounter[0]+1]>=NUM_INNATE_PER_SPECIES) gBattleStruct->switchInInnatesCounter[0]++;
     }
     if (AbilityBattleEffects(ABILITYEFFECT_TRACE1, 0, 0, 0, 0) != 0)
         return;

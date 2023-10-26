@@ -564,6 +564,8 @@ struct BattleStruct
     u8 moneyMultiplierMove:1;
     u8 savedTurnActionNumber;
     u8 switchInAbilitiesCounter;
+    u8 switchInInnatesCounter[MAX_BATTLERS_COUNT + 1];//first index counts how many battlers have had innates counted
+    bool8 innateCheckMode;//enable to skip checks if the switch in/end of turn ability is done
     u8 faintedActionsState;
     u8 faintedActionsBattlerId;
     u8 scriptPartyIdx; // for printing the nickname
