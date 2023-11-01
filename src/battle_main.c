@@ -3406,7 +3406,7 @@ void FaintClearSetData(u32 battler)
 
 static void DoBattleIntro(void)
 {
-    s32 i;
+    s32 i, j;
     u32 battler;
     u8 *state = &gBattleStruct->introState;
 
@@ -3725,7 +3725,11 @@ static void DoBattleIntro(void)
             for(i = 0;i < MAX_BATTLERS_COUNT+1;i++){
                 gBattleStruct->switchInInnatesCounter[i] = 0;
             }
-            gBattleStruct->innateCheckMode = FALSE;
+            j = sizeof(*(gBattleStruct->innateCheckMode));
+            for(i=0;i<j;i++){
+                gBattleStruct->innateCheckMode[i] = FALSE;
+            }
+            gBattleStruct->innatesIterator = 0;
             gBattleStruct->switchInItemsCounter = 0;
             gBattleStruct->overworldWeatherDone = FALSE;
             SetAiLogicDataForTurn(AI_DATA); // get assumed abilities, hold effects, etc of all battlers
@@ -3838,7 +3842,7 @@ static void TryDoEventsBeforeFirstTurn(void)
             gBattleStruct->switchInInnatesCounter[gBattleStruct->switchInInnatesCounter[0]+1]++;
             gBattlerAttacker = gBattlerByTurnOrder[gBattleStruct->switchInInnatesCounter[0]];
             innate = gSpeciesInfo[gBattleMons[gBattlerAttacker].species].innates[innateSlot];
-            gBattleStruct->innateCheckMode = TRUE;
+            gBattleStruct->innateCheckMode[INNATECHECK_SWITCHIN] = TRUE;
             if (AbilityBattleEffects(ABILITYEFFECT_ON_SWITCHIN, gBattlerAttacker, 0, innate, 0) != 0){
                 return;
             }

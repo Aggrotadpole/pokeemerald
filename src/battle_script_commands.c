@@ -1272,6 +1272,9 @@ bool32 ProteanTryChangeType(u32 battler, u32 ability, u32 move, u32 moveType)
 static void Cmd_attackcanceler(void)
 {
     CMD_ARGS();
+    bool8 abilityused = FALSE;
+     u32 innateSlot = 0;
+     u32 innate = 0;
 
     s32 i, moveType;
     u16 attackerAbility = GetBattlerAbility(gBattlerAttacker);
@@ -1339,8 +1342,29 @@ static void Cmd_attackcanceler(void)
 
     if (AtkCanceller_UnableToUseMove2())
         return;
-    if (AbilityBattleEffects(ABILITYEFFECT_MOVES_BLOCK, gBattlerTarget, 0, 0, 0))
-        return;
+    //if (AbilityBattleEffects(ABILITYEFFECT_MOVES_BLOCK, gBattlerTarget, 0, 0, 0))
+        //return;
+    if(!gBattleStruct->innateCheckMode[INNATECHECK_MOVES_BLOCK]){
+        if (AbilityBattleEffects(ABILITYEFFECT_MOVES_BLOCK, gBattlerTarget, 0, 0, 0)){
+            return;
+        }
+        gBattleStruct->innateCheckMode[INNATECHECK_MOVES_BLOCK] = TRUE;
+        gBattleStruct->currentInnateCheck = INNATECHECK_MOVES_BLOCK;
+        gBattleStruct->innatesIterator = 0;
+    }
+    for (i = 0;i<NUM_INNATE_PER_SPECIES;i++){
+        gBattleStruct->currentInnateCheck = INNATECHECK_MOVES_BLOCK;
+        gBattleStruct->innateCheckMode[INNATECHECK_MOVES_BLOCK] = TRUE;
+        if (AbilityBattleEffects(ABILITYEFFECT_MOVES_BLOCK, gBattlerTarget, 0, gSpeciesInfo[gBattleMons[gBattlerTarget].species].innates[0], 0)){
+            return;
+        }
+
+        //gBattleStruct->innatesIterator++;
+        if(i<NUM_INNATE_PER_SPECIES){
+            gBattleStruct->currentInnateCheck = INNATECHECK_MOVES_BLOCK;
+            gBattleStruct->innateCheckMode[INNATECHECK_MOVES_BLOCK] = TRUE;
+        }
+    }
     if (!gBattleMons[gBattlerAttacker].pp[gCurrMovePos] && gCurrentMove != MOVE_STRUGGLE
      && !(gHitMarker & (HITMARKER_ALLOW_NO_PP | HITMARKER_NO_ATTACKSTRING | HITMARKER_NO_PPDEDUCT))
      && !(gBattleMons[gBattlerAttacker].status2 & STATUS2_MULTIPLETURNS))
@@ -1503,8 +1527,25 @@ static bool32 JumpIfMoveFailed(u8 adder, u16 move)
     else
     {
         TrySetDestinyBondToHappen();
-        if (AbilityBattleEffects(ABILITYEFFECT_ABSORBING, gBattlerTarget, 0, 0, move))
-            return TRUE;
+        //if (AbilityBattleEffects(ABILITYEFFECT_ABSORBING, gBattlerTarget, 0, 0, move))
+            //return TRUE;
+        if(!gBattleStruct->innateCheckMode[INNATECHECK_ABSORBING]){
+            if (AbilityBattleEffects(ABILITYEFFECT_ABSORBING, gBattlerTarget, 0, 0, 0)){
+                return TRUE;
+            }
+            gBattleStruct->innateCheckMode[INNATECHECK_ABSORBING] = TRUE;
+            gBattleStruct->currentInnateCheck = INNATECHECK_ABSORBING;
+            gBattleStruct->innatesIterator = 0;
+        }
+        while (gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+            gBattleStruct->currentInnateCheck = INNATECHECK_ABSORBING;
+            gBattleStruct->innateCheckMode[INNATECHECK_ABSORBING] = TRUE;
+            if (AbilityBattleEffects(ABILITYEFFECT_ABSORBING, gBattlerTarget, 0, gSpeciesInfo[gBattleMons[gBattlerTarget].species].innates[gBattleStruct->innatesIterator], 0)){
+                return TRUE;
+            }
+
+            gBattleStruct->innatesIterator++;
+        }
     }
     gBattlescriptCurrInstr += adder;
     return FALSE;
@@ -5503,30 +5544,138 @@ static void Cmd_moveend(void)
             gBattleScripting.moveendState++;
             break;
         case MOVEEND_SYNCHRONIZE_TARGET: // target synchronize
-            if (AbilityBattleEffects(ABILITYEFFECT_SYNCHRONIZE, gBattlerTarget, 0, 0, 0))
-                effect = TRUE;
-            gBattleScripting.moveendState++;
+            //
+            //if (AbilityBattleEffects(ABILITYEFFECT_SYNCHRONIZE, gBattlerTarget, 0, 0, 0))
+            //    effect = TRUE;
+            //gBattleScripting.moveendState++;
+
+            if(!(gBattleStruct->innateCheckMode[INNATECHECK_SYNCHRONIZE])){
+                gBattleStruct->innatesIterator = 0;
+                if (AbilityBattleEffects(ABILITYEFFECT_SYNCHRONIZE, gBattlerTarget, 0, 0, 0)){
+                    effect = TRUE;
+                    break;
+                }
+            }
+            gBattleStruct->innateCheckMode[INNATECHECK_SYNCHRONIZE] = TRUE;
+            gBattleStruct->currentInnateCheck = INNATECHECK_SYNCHRONIZE;
+            if (gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                if (AbilityBattleEffects(ABILITYEFFECT_SYNCHRONIZE, gBattlerTarget, 0, gSpeciesInfo[gBattleMons[gBattlerTarget].species].innates[gBattleStruct->innatesIterator], 0)){
+                    effect = TRUE;
+                    break;
+                }
+                gBattleStruct->innatesIterator++;
+                if(gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                    gBattleStruct->currentInnateCheck = INNATECHECK_SYNCHRONIZE;
+                    gBattleStruct->innateCheckMode[INNATECHECK_SYNCHRONIZE] = TRUE;
+                }
+            }
+            if(gBattleStruct->innatesIterator>=NUM_INNATE_PER_SPECIES)gBattleScripting.moveendState++;
+
             break;
         case MOVEEND_ABILITIES: // Such as abilities activating on contact(Poison Spore, Rough Skin, etc.).
-            if (AbilityBattleEffects(ABILITYEFFECT_MOVE_END, gBattlerTarget, 0, 0, 0))
-                effect = TRUE;
-            gBattleScripting.moveendState++;
+            //if (AbilityBattleEffects(ABILITYEFFECT_MOVE_END, gBattlerTarget, 0, 0, 0))
+            //    effect = TRUE;
+            //gBattleScripting.moveendState++;
+            if(!(gBattleStruct->innateCheckMode[INNATECHECK_MOVE_END])){
+                gBattleStruct->innatesIterator = 0;
+                if (AbilityBattleEffects(ABILITYEFFECT_MOVE_END, gBattlerTarget, 0, 0, 0)){
+                    effect = TRUE;
+                }
+            }
+            gBattleStruct->innateCheckMode[INNATECHECK_MOVE_END] = TRUE;
+            gBattleStruct->currentInnateCheck = INNATECHECK_MOVE_END;
+            if (gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                if (AbilityBattleEffects(ABILITYEFFECT_MOVE_END, gBattlerTarget, 0, gSpeciesInfo[gBattleMons[gBattlerTarget].species].innates[gBattleStruct->innatesIterator], 0)){
+                    effect = TRUE;
+                }
+                gBattleStruct->innatesIterator++;
+                if(gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                    gBattleStruct->currentInnateCheck = INNATECHECK_MOVE_END;
+                    gBattleStruct->innateCheckMode[INNATECHECK_MOVE_END] = TRUE;
+                }
+            }
+            if(gBattleStruct->innatesIterator>=NUM_INNATE_PER_SPECIES)gBattleScripting.moveendState++;
+
             break;
         case MOVEEND_ABILITIES_ATTACKER: // Poison Touch, possibly other in the future
-            if (AbilityBattleEffects(ABILITYEFFECT_MOVE_END_ATTACKER, gBattlerAttacker, 0, 0, 0))
-                effect = TRUE;
-            gBattleScripting.moveendState++;
+            //if (AbilityBattleEffects(ABILITYEFFECT_MOVE_END_ATTACKER, gBattlerAttacker, 0, 0, 0))
+            //    effect = TRUE;
+            //gBattleScripting.moveendState++;
+            if(!(gBattleStruct->innateCheckMode[INNATECHECK_MOVE_END_ATTACKER])){
+                gBattleStruct->innatesIterator = 0;
+                if (AbilityBattleEffects(ABILITYEFFECT_MOVE_END_ATTACKER, gBattlerAttacker, 0, 0, 0)){
+                    effect = TRUE;
+                }
+            }
+            gBattleStruct->innateCheckMode[INNATECHECK_MOVE_END_ATTACKER] = TRUE;
+            gBattleStruct->currentInnateCheck = INNATECHECK_MOVE_END_ATTACKER;
+            if (gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                if (AbilityBattleEffects(ABILITYEFFECT_MOVE_END_ATTACKER, gBattlerAttacker, 0, gSpeciesInfo[gBattleMons[gBattlerAttacker].species].innates[gBattleStruct->innatesIterator], 0)){
+                    effect = TRUE;
+                }
+                gBattleStruct->innatesIterator++;
+                if(gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                    gBattleStruct->currentInnateCheck = INNATECHECK_MOVE_END_ATTACKER;
+                    gBattleStruct->innateCheckMode[INNATECHECK_MOVE_END_ATTACKER] = TRUE;
+                }
+            }
+            if(gBattleStruct->innatesIterator>=NUM_INNATE_PER_SPECIES)gBattleScripting.moveendState++;
+
             break;
         case MOVEEND_STATUS_IMMUNITY_ABILITIES: // status immunities
-            if (AbilityBattleEffects(ABILITYEFFECT_IMMUNITY, 0, 0, 0, 0))
-                effect = TRUE; // it loops through all battlers, so we increment after its done with all battlers
-            else
-                gBattleScripting.moveendState++;
+            //if (AbilityBattleEffects(ABILITYEFFECT_IMMUNITY, 0, 0, 0, 0))
+            //    effect = TRUE; // it loops through all battlers, so we increment after its done with all battlers
+            //else
+            //    gBattleScripting.moveendState++;
+
+
+            if(!(gBattleStruct->innateCheckMode[INNATECHECK_IMMUNITY])){
+                gBattleStruct->innatesIterator = 0;
+                if (AbilityBattleEffects(ABILITYEFFECT_IMMUNITY, 0, 0, 0, 0)){
+                    effect = TRUE;
+                }
+            }
+            gBattleStruct->innateCheckMode[INNATECHECK_IMMUNITY] = TRUE;
+            gBattleStruct->currentInnateCheck = INNATECHECK_IMMUNITY;
+            if (gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                if (AbilityBattleEffects(ABILITYEFFECT_IMMUNITY, 0, 0, gBattleStruct->innatesIterator+1, 0)){
+                    effect = TRUE;
+                }
+                gBattleStruct->innatesIterator++;
+                if(gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                    gBattleStruct->currentInnateCheck = INNATECHECK_IMMUNITY;
+                    gBattleStruct->innateCheckMode[INNATECHECK_IMMUNITY] = TRUE;
+                }
+            }
+            if(gBattleStruct->innatesIterator>=NUM_INNATE_PER_SPECIES)gBattleScripting.moveendState++;
+
             break;
         case MOVEEND_SYNCHRONIZE_ATTACKER: // attacker synchronize
-            if (AbilityBattleEffects(ABILITYEFFECT_ATK_SYNCHRONIZE, gBattlerAttacker, 0, 0, 0))
-                effect = TRUE;
-            gBattleScripting.moveendState++;
+            //if (AbilityBattleEffects(ABILITYEFFECT_ATK_SYNCHRONIZE, gBattlerAttacker, 0, 0, 0))
+            //    effect = TRUE;
+            //gBattleScripting.moveendState++;
+            if(!(gBattleStruct->innateCheckMode[INNATECHECK_ATK_SYNCHRONIZE])){
+                gBattleStruct->innatesIterator = 0;
+                if (AbilityBattleEffects(ABILITYEFFECT_ATK_SYNCHRONIZE, gBattlerAttacker, 0, 0, 0)){
+                    effect = TRUE;
+                    break;
+                }
+            }
+            gBattleStruct->innateCheckMode[INNATECHECK_ATK_SYNCHRONIZE] = TRUE;
+            gBattleStruct->currentInnateCheck = INNATECHECK_ATK_SYNCHRONIZE;
+            if (gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                if (AbilityBattleEffects(ABILITYEFFECT_ATK_SYNCHRONIZE, gBattlerAttacker, 0, gSpeciesInfo[gBattleMons[gBattlerAttacker].species].innates[gBattleStruct->innatesIterator], 0)){
+                    effect = TRUE;
+                    break;
+                }
+                gBattleStruct->innatesIterator++;
+                if(gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                    gBattleStruct->currentInnateCheck = INNATECHECK_ATK_SYNCHRONIZE;
+                    gBattleStruct->innateCheckMode[INNATECHECK_ATK_SYNCHRONIZE] = TRUE;
+                }
+            }
+            if(gBattleStruct->innatesIterator>=NUM_INNATE_PER_SPECIES)gBattleScripting.moveendState++;
+
             break;
         case MOVEEND_CHOICE_MOVE: // update choice band move
             if (gHitMarker & HITMARKER_OBEYS
@@ -6098,14 +6247,35 @@ static void Cmd_moveend(void)
                     }
                     for (battler = 0; battler < MAX_BATTLERS_COUNT; battler++)
                     {
-                        if (GetBattlerAbility(battler) == ABILITY_DANCER && !gSpecialStatuses[battler].dancerUsedMove)
+                        if ((GetBattlerAbility(battler) == ABILITY_DANCER||BattlerHasInnate(battler,ABILITY_DANCER)) && !gSpecialStatuses[battler].dancerUsedMove)
                         {
                             if (!nextDancer || (gBattleMons[battler].speed < gBattleMons[nextDancer & 0x3].speed))
                                 nextDancer = battler | 0x4;
                         }
                     }
-                    if (nextDancer && AbilityBattleEffects(ABILITYEFFECT_MOVE_END_OTHER, nextDancer & 0x3, 0, 0, 0))
-                        effect = TRUE;
+                    //if (nextDancer && AbilityBattleEffects(ABILITYEFFECT_MOVE_END_OTHER, nextDancer & 0x3, 0, 0, 0))
+                    //    effect = TRUE;
+                    if(!(gBattleStruct->innateCheckMode[INNATECHECK_MOVE_END_OTHER])){
+                        gBattleStruct->innatesIterator = 0;
+                        if (AbilityBattleEffects(ABILITYEFFECT_MOVE_END_OTHER, nextDancer & 0x3, 0, 0, 0)){
+                            effect = TRUE;
+                            gBattleScripting.moveendState++;
+                            break;
+                        }
+                    }
+                    gBattleStruct->innateCheckMode[INNATECHECK_MOVE_END_OTHER] = TRUE;
+                    gBattleStruct->currentInnateCheck = INNATECHECK_MOVE_END_OTHER;
+                    while (gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                        if (AbilityBattleEffects(ABILITYEFFECT_MOVE_END_OTHER, nextDancer & 0x3, 0, gSpeciesInfo[gBattleMons[nextDancer & 0x3].species].innates[gBattleStruct->innatesIterator], 0)){
+                            effect = TRUE;
+                            break;
+                        }
+                        gBattleStruct->innatesIterator++;
+                        if(gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                            gBattleStruct->currentInnateCheck = INNATECHECK_MOVE_END_OTHER;
+                            gBattleStruct->innateCheckMode[INNATECHECK_MOVE_END_OTHER] = TRUE;
+                        }
+                    }
                 }
             }
             gBattleScripting.moveendState++;
@@ -6879,12 +7049,32 @@ static void SetDmgHazardsBattlescript(u8 battler, u8 multistringId)
 
 bool32 DoSwitchInAbilitiesItems(u32 battler)
 {
+    bool8 innateresult = FALSE;
+    u16 i;
+    for(i=0;i<NUM_INNATE_PER_SPECIES;i++){
+        gBattleStruct->innateCheckMode[INNATECHECK_SWITCHIN] = TRUE;
+        gBattleStruct->currentInnateCheck = INNATECHECK_SWITCHIN;
+        innateresult = innateresult||AbilityBattleEffects(ABILITYEFFECT_ON_SWITCHIN, battler, 0, gSpeciesInfo[gBattleMons[battler].species].innates[i], 0);
+        if(innateresult)break;
+        gBattleStruct->innateCheckMode[INNATECHECK_ON_WEATHER] = TRUE;
+        gBattleStruct->currentInnateCheck = INNATECHECK_ON_WEATHER;
+        innateresult = innateresult||AbilityBattleEffects(ABILITYEFFECT_ON_WEATHER, battler, 0, gSpeciesInfo[gBattleMons[battler].species].innates[i], 0);
+        if(innateresult)break;
+        gBattleStruct->innateCheckMode[INNATECHECK_ON_TERRAIN] = TRUE;
+        gBattleStruct->currentInnateCheck = INNATECHECK_ON_TERRAIN;
+        innateresult = innateresult||AbilityBattleEffects(ABILITYEFFECT_ON_TERRAIN, battler, 0, gSpeciesInfo[gBattleMons[battler].species].innates[i], 0);
+        if(innateresult)break;
+        //gBattleStruct->innateCheckMode[INNATECHECK_ON_SWITCHIN] = TRUE;
+        //gBattleStruct->currentInnateCheck = INNATECHECK_ON_SWITCHIN;
+        //innateresult = innateresult||AbilityBattleEffects(ABILITYEFFECT_TRACE2, 0, 0, i+1, 0);
+        //if(innateresult)break;
+    }
     return (TryPrimalReversion(battler)
              || AbilityBattleEffects(ABILITYEFFECT_ON_SWITCHIN, battler, 0, 0, 0)
              || (gBattleWeather & B_WEATHER_ANY && WEATHER_HAS_EFFECT && AbilityBattleEffects(ABILITYEFFECT_ON_WEATHER, battler, 0, 0, 0))
              || (gFieldStatuses & STATUS_FIELD_TERRAIN_ANY && AbilityBattleEffects(ABILITYEFFECT_ON_TERRAIN, battler, 0, 0, 0))
              || ItemBattleEffects(ITEMEFFECT_ON_SWITCH_IN, battler, FALSE)
-             || AbilityBattleEffects(ABILITYEFFECT_TRACE2, 0, 0, 0, 0));
+             || AbilityBattleEffects(ABILITYEFFECT_TRACE2, 0, 0, 0, 0))||innateresult;
 }
 
 bool32 ShouldPostponeSwitchInAbilities(u32 battler)
@@ -10713,6 +10903,11 @@ static void Cmd_various(void)
         VARIOUS_ARGS();
         gBattlescriptCurrInstr = cmd->nextInstr;
         AbilityBattleEffects(ABILITYEFFECT_ON_WEATHER, battler, 0, 0, 0);
+        for(i=0;i<NUM_INNATE_PER_SPECIES;i++){
+            gBattleStruct->innateCheckMode[INNATECHECK_ON_WEATHER] = TRUE;
+            gBattleStruct->currentInnateCheck = INNATECHECK_ON_WEATHER;
+            AbilityBattleEffects(ABILITYEFFECT_ON_WEATHER, battler, 0, gSpeciesInfo[gBattleMons[battler].species].innates[i], 0);
+        }
         return;
     }
     case VARIOUS_ACTIVATE_TERRAIN_CHANGE_ABILITIES:
@@ -10720,6 +10915,11 @@ static void Cmd_various(void)
         VARIOUS_ARGS();
         gBattlescriptCurrInstr = cmd->nextInstr;
         AbilityBattleEffects(ABILITYEFFECT_ON_TERRAIN, battler, 0, 0, 0);
+        for(i=0;i<NUM_INNATE_PER_SPECIES;i++){
+            gBattleStruct->innateCheckMode[INNATECHECK_ON_TERRAIN] = TRUE;
+            gBattleStruct->currentInnateCheck = INNATECHECK_ON_TERRAIN;
+            AbilityBattleEffects(ABILITYEFFECT_ON_TERRAIN, battler, 0, gSpeciesInfo[gBattleMons[battler].species].innates[i], 0);
+        }
         return;
     }
     case VARIOUS_STORE_HEALING_WISH:

@@ -20,6 +20,22 @@
    (!(gBattleMons[battler].status2 & STATUS2_TRANSFORMED)           \
  && !(gDisableStructs[battler].mimickedMoves & gBitTable[moveSlot]))
 
+// Innate Check Types
+#define INNATECHECK_SWITCHIN 0
+#define INNATECHECK_ENDTURN 1
+#define INNATECHECK_MOVES_BLOCK 2
+#define INNATECHECK_ABSORBING 3
+#define INNATECHECK_MOVE_END 4
+#define INNATECHECK_MOVE_END_ATTACKER 5
+#define INNATECHECK_MOVE_END_OTHER 6
+#define INNATECHECK_IMMUNITY 7
+#define INNATECHECK_SYNCHRONIZE 8
+#define INNATECHECK_ATK_SYNCHRONIZE 9
+#define INNATECHECK_ON_WEATHER 10
+#define INNATECHECK_ON_TERRAIN 11
+
+#define NUM_INNATE_CHECK_TYPES 12
+
 // Battle Actions
 // These determine what each battler will do in a turn
 #define B_ACTION_USE_MOVE               0
@@ -565,7 +581,9 @@ struct BattleStruct
     u8 savedTurnActionNumber;
     u8 switchInAbilitiesCounter;
     u8 switchInInnatesCounter[MAX_BATTLERS_COUNT + 1];//first index counts how many battlers have had innates counted
-    bool8 innateCheckMode;//enable to skip checks if the switch in/end of turn ability is done
+    u8 innatesIterator;//for individually iterating through innates without regard for order
+    bool8 innateCheckMode[NUM_INNATE_CHECK_TYPES];//enable to skip checks if the switch in/end of turn ability is done
+    u8 currentInnateCheck;//set value to later identify the current check
     u8 faintedActionsState;
     u8 faintedActionsBattlerId;
     u8 scriptPartyIdx; // for printing the nickname

@@ -2606,9 +2606,28 @@ u8 DoBattlerEndTurnEffects(void)
             gBattleStruct->turnEffectsTracker++;
             break;
         case ENDTURN_ABILITIES:  // end turn abilities
-            if (AbilityBattleEffects(ABILITYEFFECT_ENDTURN, battler, 0, 0, 0))
-                effect++;
-            gBattleStruct->turnEffectsTracker++;
+            if(!gBattleStruct->innateCheckMode[INNATECHECK_ENDTURN]){
+                if (AbilityBattleEffects(ABILITYEFFECT_ENDTURN, battler, 0, 0, 0)){
+                    effect++;
+                }
+                gBattleStruct->innateCheckMode[INNATECHECK_ENDTURN] = TRUE;
+                gBattleStruct->currentInnateCheck = INNATECHECK_ENDTURN;
+                gBattleStruct->innatesIterator = 0;
+                break;
+            }
+            if (gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                if (AbilityBattleEffects(ABILITYEFFECT_ENDTURN, battler, 0, gSpeciesInfo[gBattleMons[battler].species].innates[gBattleStruct->innatesIterator], 0) != 0){
+                    effect++;
+                }
+                gBattleStruct->innatesIterator++;
+                if(gBattleStruct->innatesIterator<NUM_INNATE_PER_SPECIES){
+                    gBattleStruct->innateCheckMode[INNATECHECK_ENDTURN] = TRUE;
+                    gBattleStruct->currentInnateCheck = INNATECHECK_ENDTURN;
+                }else gBattleStruct->turnEffectsTracker++;
+            }
+
+
+
             break;
         case ENDTURN_ITEMS1:  // item effects
             if (ItemBattleEffects(ITEMEFFECT_NORMAL, battler, FALSE))
@@ -4167,8 +4186,8 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
     u32 moveType, move;
     u32 i, j;
     bool8 runInnates = FALSE;
-    if(gBattleStruct->innateCheckMode)runInnates = TRUE;
-    gBattleStruct->innateCheckMode = FALSE;
+    if(gBattleStruct->innateCheckMode[gBattleStruct->currentInnateCheck])runInnates = TRUE;
+    gBattleStruct->innateCheckMode[gBattleStruct->currentInnateCheck] = FALSE;
     if (gBattleTypeFlags & BATTLE_TYPE_SAFARI)
         return 0;
 
@@ -5795,7 +5814,8 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
     case ABILITYEFFECT_IMMUNITY: // 5
         for (battler = 0; battler < gBattlersCount; battler++)
         {
-            switch (GetBattlerAbility(battler))
+
+            switch (!special?GetBattlerAbility(battler):gSpeciesInfo[gBattleMons[battler].species].innates[gLastUsedAbility-1])
             {
             case ABILITY_IMMUNITY:
             case ABILITY_PASTEL_VEIL:
@@ -5931,7 +5951,8 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
     case ABILITYEFFECT_TRACE2:
         for (i = 0; i < gBattlersCount; i++)
         {
-            if (gBattleMons[i].ability == ABILITY_TRACE && (gBattleResources->flags->flags[i] & RESOURCE_FLAG_TRACED))
+            u16 currability = !special?gBattleMons[i].ability:gSpeciesInfo[gBattleMons[i].species].innates[gLastUsedAbility-1];
+            if (currability == ABILITY_TRACE && (gBattleResources->flags->flags[i] & RESOURCE_FLAG_TRACED))
             {
                 u32 chosenTarget;
                 u32 side = (BATTLE_OPPOSITE(GetBattlerPosition(i))) & BIT_SIDE; // side of the opposing pokemon
@@ -6025,7 +6046,7 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
         break;
     case ABILITYEFFECT_ON_WEATHER: // For ability effects that activate when the battle weather changes.
         battler = gBattlerAbility = gBattleScripting.battler;
-        gLastUsedAbility = GetBattlerAbility(battler);
+        //gLastUsedAbility = GetBattlerAbility(battler);
         switch (gLastUsedAbility)
         {
         case ABILITY_FORECAST:
@@ -6063,7 +6084,7 @@ u32 AbilityBattleEffects(u32 caseID, u32 battler, u32 ability, u32 special, u32 
         }
         break;
     case ABILITYEFFECT_ON_TERRAIN:  // For ability effects that activate when the field terrain changes.
-        gLastUsedAbility = GetBattlerAbility(battler);
+        //gLastUsedAbility = GetBattlerAbility(battler);
         switch (gLastUsedAbility)
         {
         case ABILITY_MIMICRY:
